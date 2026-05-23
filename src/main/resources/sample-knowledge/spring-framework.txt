@@ -1,0 +1,28 @@
+Spring 框架是 Java 企业级应用开发的核心框架，由 Rod Johnson 于 2003 年创建。Spring 框架的核心思想是控制反转（Inversion of Control，IoC）和面向切面编程（Aspect-Oriented Programming，AOP）。
+
+控制反转（IoC）与依赖注入（DI）：
+
+IoC 是一种设计原则，它将对象的创建和依赖关系的管理从应用程序代码转移到容器（IoC 容器）中。依赖注入是实现 IoC 的一种方式，对象的依赖通过构造函数参数、工厂方法参数或属性来设置。Spring 的 IoC 容器负责管理 Bean 的生命周期和依赖关系。
+
+面向切面编程（AOP）：
+
+AOP 允许将横切关注点（如日志记录、事务管理、安全检查等）与业务逻辑分离。通过切面（Aspect）、连接点（Join Point）、通知（Advice）、切入点（Pointcut）等概念实现。
+
+Spring 框架的模块组成：
+
+1. Spring Core：提供 IoC 容器和依赖注入功能。
+2. Spring AOP：提供面向切面编程的支持。
+3. Spring Data Access：包括 JDBC 抽象层、事务管理、ORM 集成等。
+4. Spring Web：提供 Web 应用开发支持，包括 Spring MVC。
+5. Spring Security：提供认证和授权功能。
+6. Spring Boot：Spring 的自动化配置和快速开发框架。
+
+Spring Boot 的核心特性：
+
+- 自动配置（Auto Configuration）：根据项目依赖自动配置 Spring 应用。
+- Starter 依赖：一组预定义的依赖描述，简化 Maven/Gradle 配置。
+- 嵌入式服务器：内嵌 Tomcat、Jetty 等 Web 服务器，无需单独部署。
+- Actuator：提供生产级监控和管理功能。
+- Spring Boot CLI：命令行工具，快速原型开发。
+
+Spring 的事务管理支持声明式事务（通过 @Transactional 注解）和编程式事务两种方式。声明式事务更为常用，它通过 AOP 实现，将事务管理与业务代码分离。

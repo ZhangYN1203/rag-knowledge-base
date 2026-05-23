@@ -1,0 +1,30 @@
+services:
+  # Backend API
+  - type: web
+    name: rag-knowledge-base-api
+    env: java
+    buildCommand: ./mvnw clean package -DskipTests
+    startCommand: java -jar target/*.jar --spring.profiles.active=openai
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: SPRING_DATASOURCE_URL
+        fromDatabase:
+          name: rag-db
+          property: connectionString
+      - key: SPRING_DATASOURCE_USERNAME
+        fromDatabase:
+          name: rag-db
+          property: user
+      - key: SPRING_DATASOURCE_PASSWORD
+        fromDatabase:
+          name: rag-db
+          property: password
+      - key: JWT_SECRET
+        generateValue: true
+
+databases:
+  - name: rag-db
+    plan: free
+    databaseName: rag_knowledge_base
+    postgresMajorVersion: 16
