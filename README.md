@@ -7,9 +7,7 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791)](https://www.postgresql.org/)
 [![License](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
 
-> **项目链接**: [GitHub](https://github.com/cs-sbs/personal-project-ZhangYN1203)
->
-> **在线体验**: <!-- 部署后在此填入 Vercel/Netlify URL -->
+> **部署访问地址**: `http://localhost`（Docker Compose 部署）
 
 ---
 
@@ -18,11 +16,10 @@
 - [技术栈](#技术栈)
 - [系统架构](#系统架构)
 - [核心功能](#核心功能)
-- [快速开始](#快速开始)
+- [部署说明](#部署说明)
 - [API 文档](#api-文档)
 - [Prompt 模板设计](#prompt-模板设计)
 - [项目结构](#项目结构)
-- [部署指南](#部署指南)
 - [许可证](#许可证)
 
 ---
@@ -146,52 +143,38 @@ graph TB
 
 ---
 
-## 快速开始
+## 部署说明
 
-### 方式一：Docker 一键部署（推荐）
+### Docker Compose 部署（推荐）
 
 ```bash
-# 1. 确保安装 Docker 和 Docker Compose
-# 2. 启动所有服务
 docker-compose up -d
-
-# 3. 等待服务启动（约 2-3 分钟）
-docker-compose logs -f
-
-# 4. 访问应用
-# 前端：http://localhost
-# 后端 API: http://localhost:8080
-# Swagger 文档：http://localhost:8080/swagger-ui.html
 ```
 
-### 方式二：本地手动启动
+启动后访问 **http://localhost** 即可使用系统。
 
-#### 前置条件
-- JDK 21+
-- Node.js 18+
-- Ollama（用于本地 AI 模型）
+### 手动启动（开发环境）
 
-#### 1. 启动 Ollama 并拉取模型
+**前置条件**: JDK 21+, Node.js 18+, Ollama
+
 ```bash
+# 1. 启动 Ollama 并拉取模型
 ollama serve
 ollama pull qwen2:0.5b
 ollama pull nomic-embed-text
-```
 
-#### 2. 启动后端
-```bash
-cd personal-project-ZhangYN1203-main
+# 2. 启动后端（终端 1）
 ./mvnw spring-boot:run
-```
 
-#### 3. 启动前端
-```bash
+# 3. 启动前端（终端 2）
 cd frontend
 npm install
 npm run dev
 ```
 
-访问 http://localhost:3000
+- 前端访问：http://localhost:3000
+- 后端 API：http://localhost:8080
+- API 文档：http://localhost:8080/swagger-ui.html
 
 ---
 
@@ -270,48 +253,6 @@ personal-project-ZhangYN1203-main/
 
 ---
 
-## 部署指南
-
-### 前端部署到 Netlify（推荐）
-
-[![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start)
-
-1. 登录 [Netlify](https://app.netlify.com)
-2. 点击 **Add new site → Import an existing project**
-3. 连接 GitHub，选择 `cs-sbs/personal-project-ZhangYN1203`
-4. 构建设置自动读取 `netlify.toml`：
-   - Build command: `npm run build`
-   - Publish directory: `dist`
-5. 点击 **Deploy**
-6. 部署完成后，在 `netlify.toml` 中替换后端 URL，重新部署
-
-### 前端部署到 Vercel
-
-1. 登录 [Vercel](https://vercel.com)
-2. 点击 **Add New → Project**
-3. 导入 GitHub 仓库
-4. Framework preset: **Vite**
-5. Root Directory: `frontend`
-6. 部署完成后配置环境变量
-
-### 后端部署到 Render
-
-1. 登录 [Render](https://render.com)
-2. 点击 **New + → Web Service**
-3. 连接 GitHub 仓库
-4. Render 自动识别 `render.yml`，点击 **Apply**
-5. 设置环境变量 `OPENAI_API_KEY`
-
-> 注意：Render 需要 OpenAI API Key（不能在 Render 上运行 Ollama），部署后需在 `application-openai.yml` 中配置 API Key。
-
-### Docker 本地部署
-
-```bash
-docker-compose up -d
-```
-
----
-
 ## 开发重难点解决方案
 
 ### 1. 多格式文档解析
@@ -332,24 +273,6 @@ docker-compose up -d
 ### 4. H2 兼容设计
 - EmbeddingService 自动检测数据库类型
 - H2 环境下使用简化 SQL，PG 环境下使用 pgvector 原生语法
-
----
-
-## 系统要求
-
-### 本地开发
-- JDK 21+
-- Maven 3.6+
-- Node.js 18+
-- Ollama
-- Docker 20+（可选）
-
-### 服务器部署
-- 内存 4GB+
-- Docker 20+
-- 可选：NVIDIA GPU（加速推理）
-
----
 
 ## 许可证
 
