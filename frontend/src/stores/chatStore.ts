@@ -91,7 +91,6 @@ export const useChatStore = defineStore('chat', () => {
   function newConversation() {
     currentConversationId.value = null
     messages.value = []
-    currentAssistantMsg = null
   }
 
   async function deleteConversation(conversationId: string) {
