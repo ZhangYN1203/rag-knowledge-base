@@ -1,459 +1,261 @@
 # RAG 智能知识库问答系统
 
-基于检索增强生成（RAG）技术的智能问答平台，支持文档知识库管理、向量检索、AI 对话、用户权限管控等核心能力。
-
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2.5-brightgreen)](https://spring.io/projects/spring-boot)
-[![Vue 3](https://img.shields.io/badge/Vue-3.4-4FC08D)](https://vuejs.org/)
-[![Vite](https://img.shields.io/badge/Vite-5-646CFF)](https://vitejs.dev/)
-[![License](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
+基于 **RAG（Retrieval-Augmented Generation，检索增强生成）** 技术的智能知识库问答平台。用户上传知识库文档后，系统自动解析文档内容并构建向量索引，在问答环节通过语义检索匹配最相关的文档片段，结合大语言模型生成精准回答，同时展示引用来源。
 
 ---
 
 ## 📋 目录
 
-- [项目简介](#项目简介)
-- [技术栈](#技术栈)
-- [系统架构](#系统架构)
-- [核心功能](#核心功能)
-- [部署链接](#部署链接)
-- [本地快速启动](#本地快速启动)
-- [在线部署指南](#在线部署指南)
-- [API 文档](#api-文档)
-- [Prompt 模板设计](#prompt-模板设计)
-- [项目结构](#项目结构)
-- [AI 辅助开发说明](#ai-辅助开发说明)
-- [评分参考](#评分参考)
+- [系统功能](#系统功能)
+- [技术架构](#技术架构)
+- [在线访问](#在线访问)
+- [本地运行](#本地运行)
+- [环境变量说明](#环境变量说明)
+- [部署说明](#部署说明)
+- [前端接口转发](#前端接口转发)
+- [安全说明](#安全说明)
+- [项目目录结构](#项目目录结构)
+- [使用说明](#使用说明)
+- [常见问题](#常见问题)
 
 ---
 
-## 📖 项目简介
+## ✨ 系统功能
 
-本项目是一个 **RAG（检索增强生成）智能知识库问答系统**，用户上传文档后，系统自动对文档进行分块和向量化，用户提问时通过语义检索找到最相关的文档片段，结合大语言模型生成精准回答。
-
-**选做主题：** 智能知识库管理系统 (RAG-based Wiki)
-
-**核心特性：**
-- 📄 多格式文档上传（PDF / Word / TXT）
-- 🔍 语义向量检索（Top-K 匹配）
-- 🤖 AI 大模型智能问答（支持本地 Ollama / 云端 API）
-- 💬 流式对话体验
-- 👥 多用户 JWT 权限管控
-- 📝 Prompt 模板可自定义管理
+| 功能模块 | 说明 |
+|---------|------|
+| **用户注册与登录** | 支持用户注册、登录、JWT 令牌自动刷新 |
+| **文档上传与知识库管理** | 支持 TXT、PDF、Word 文档上传，文档列表查看与删除 |
+| **文档内容解析与向量化** | 后端自动解析文档内容，分块后调用嵌入模型生成向量并存储 |
+| **基于知识库的智能问答** | 用户提问时检索相关文档片段，结合 LLM 生成带引用的回答 |
+| **对话历史保存** | 每次问答自动保存到数据库，支持历史会话查看与删除 |
+| **引用来源展示** | AI 回答中标注引用编号，前端展示对应的文档来源片段 |
+| **Prompt 模板管理** | 支持自定义提示词模板，使用 `{{variable}}` 占位符动态注入 |
+| **模型配置管理** | 前端页面可查看当前 AI 提供商、模型名称、API 地址等配置信息 |
 
 ---
 
-## 🛠️ 技术栈
+## 🏗️ 技术架构
 
-### 后端
-| 技术 | 用途 |
-|------|------|
-| Spring Boot 3.2.5 | 核心框架 |
-| Spring AI 1.0.0 | AI 模型集成（Chat / Embedding） |
-| Spring Security + JWT | 无状态认证授权 |
-| Spring Data JPA + Hibernate | ORM 持久化 |
-| H2 File DB / PostgreSQL | 关系数据库 |
-| PGVector（可选） | 向量数据库 |
-| Apache PDFBox / POI | PDF / Word 文档解析 |
-| SpringDoc OpenAPI | API 文档自动生成 |
+### 整体架构
+
+```
+用户浏览器 ──→ Vercel（前端 SPA） ──→ Railway（后端 API） ──→ SiliconFlow API（AI 服务）
+                                            │
+                                          H2 数据库
+```
 
 ### 前端
+
 | 技术 | 用途 |
 |------|------|
-| Vue 3 + TypeScript | 前端框架 |
+| Vue 3 | 前端框架 |
+| TypeScript | 类型安全 |
 | Vite 5 | 构建工具 |
 | Pinia | 状态管理 |
 | Element Plus | UI 组件库 |
 | Axios | HTTP 请求 |
 | Marked + highlight.js | Markdown 渲染 |
-| Vitest | 单元测试 |
 
-### 部署与 AI
+### 后端
+
 | 技术 | 用途 |
 |------|------|
-| Docker + Docker Compose | 容器化部署 |
-| Vercel | 前端托管 |
-| Render | 后端托管 |
-| SiliconFlow API | AI 对话模型（DeepSeek-V3 / Qwen2.5） |
-| Ollama（可选） | 本地大模型备选方案 |
+| Spring Boot 3.2.5 | 核心框架 |
+| Spring Security + JWT | 用户认证与授权 |
+| Spring AI 1.0.0 | AI 模型集成 |
+| Spring Data JPA + Hibernate | 数据库 ORM |
+| H2 File DB | 关系数据库与向量存储 |
+| Apache PDFBox / POI | PDF / Word 文档解析 |
+| Maven | 项目构建 |
+
+### AI 服务
+
+| 服务 | 用途 |
+|------|------|
+| SiliconFlow API | AI 模型调用平台 |
+| Qwen/Qwen2.5-7B-Instruct | 对话生成模型 |
+| BAAI/bge-m3 | 文本嵌入模型 |
+
+### 部署
+
+| 平台 | 组件 |
+|------|------|
+| Vercel | 前端静态部署 |
+| Railway | 后端容器化部署（Docker） |
 
 ---
 
-## 🏗️ 系统架构
+## 🌐 在线访问
 
-```mermaid
-graph TB
-    subgraph 前端层["前端层 (Vue 3 SPA)"]
-        A1["Vue 3 + TypeScript<br/>Vite 构建"]
-        A2["Pinia 状态管理"]
-        A3["Element Plus UI"]
-        A4["Marked Markdown 渲染"]
-    end
+| 组件 | 地址 |
+|------|------|
+| 🖥️ **前端页面** | [https://rag-knowledge-base-beige.vercel.app](https://rag-knowledge-base-beige.vercel.app) |
+| ⚙️ **后端 API** | [https://rag-knowledge-base-api-production.up.railway.app](https://rag-knowledge-base-api-production.up.railway.app) |
 
-    subgraph 反向代理["Vercel / Nginx 反向代理"]
-        B["/api/* → 后端<br/>/* → index.html"]
-    end
-
-    subgraph 后端层["后端层 (Spring Boot 3.2.5)"]
-        C1["Controller 层<br/>Auth / Chat / Document / Template"]
-        C2["Security 层<br/>JWT 认证过滤器"]
-        C3["Service 层"]
-        C31["AuthService"]
-        C32["ChatService<br/>流式对话/历史管理"]
-        C33["DocumentService<br/>上传/解析/删除"]
-        C34["TemplateService<br/>模板管理/渲染"]
-        C35["EmbeddingService<br/>向量生成/检索"]
-    end
-
-    subgraph AI集成层["AI 集成层 (Spring AI)"]
-        D1["OpenAiChatModel<br/>DeepSeek-V3 / Qwen2.5"]
-        D2["OpenAiEmbeddingModel<br/>BAAI/bge-m3"]
-        D3["OllamaChatModel<br/>qwen2:0.5b (备选)"]
-    end
-
-    subgraph 数据层["数据层"]
-        E1["H2 File DB<br/>开发/部署环境"]
-        E2["PostgreSQL + PGVector<br/>生产环境 (备选)"]
-    end
-
-    subgraph 外部服务["外部 AI 服务"]
-        G1["SiliconFlow API<br/>DeepSeek-V3 / bge-m3"]
-        G2["Ollama<br/>本地大模型服务"]
-    end
-
-    A1 <-->|"HTTP / SSE"| B
-    B <-->|"/api/*"| C1
-    C1 <--> C2
-    C2 <--> C3
-    C31 <--> E1
-    C32 <--> C35
-    C33 <--> C35
-    C34 <--> E1
-    C35 <-->|"向量存储/检索"| E1
-    C35 <-->|"生成嵌入"| D2
-    C32 <-->|"流式对话"| D1
-    D1 -->|"API 调用"| G1
-    D2 -->|"API 调用"| G1
-    D3 -.->|"备选"| G2
-    E2 -.->|"生产环境"| C3
-
-    style A1 fill:#42b883,color:#fff
-    style B fill:#009639,color:#fff
-    style C1 fill:#6db33f,color:#fff
-    style C2 fill:#d9534f,color:#fff
-    style E1 fill:#336791,color:#fff
-    style G1 fill:#FF6A00,color:#fff
-```
-
-### 交互流程
-
-**智能问答流程：**
-
-```mermaid
-sequenceDiagram
-    participant U as 用户
-    participant F as 前端
-    participant B as 后端
-    participant AI as AI API
-    participant DB as 数据库
-
-    U->>F: 输入问题
-    F->>B: POST /api/chat
-
-    Note over B: 1. 向量检索
-    B->>AI: 问题向量化 (bge-m3)
-    AI-->>B: 返回向量
-    B->>DB: 向量相似度搜索
-    DB-->>B: Top-5 相关文档
-
-    Note over B: 2. 构建 Prompt
-    B->>B: 模板 + 上下文注入
-
-    Note over B: 3. 调用 LLM
-    B->>AI: Chat (DeepSeek-V3)
-    AI-->>B: 完整回答
-
-    B->>DB: 持久化对话记录
-    B-->>F: 返回答案 + 引用来源
-    F->>F: Markdown 渲染
-    F-->>U: 展示完整回答
-```
+> ⚠️ 后端根路径直接访问可能返回 403（属于 Spring Security 的正常访问控制），但前端通过 `/api/**` 路径转发可以正常调用所有接口。Railway 免费实例在无访问时可能进入休眠，首次请求需要等待 30-60 秒唤醒。
 
 ---
 
-## ✨ 核心功能
+## 🚀 本地运行
 
-### 1. 用户权限模块
-- 用户注册、登录、注销
-- JWT 无状态认证（Access Token 24h / Refresh Token 7d）
-- 自动刷新令牌
-- 路由守卫保护
+### 前置环境要求
 
-### 2. 知识库管理模块
-- 支持 TXT、PDF、Word 文档上传
-- 系统预置样本文档（云计算、Java、RAG、Spring）
-- 自动文档分割和向量化存储
-- 文档分类管理
+- JDK 17+
+- Node.js 18+
+- Maven（或使用项目自带的 `mvnw`）
 
-### 3. 智能问答模块
-- 语义检索匹配相关文档
-- 结合上下文生成答案
-- 流式/非流式两种对话方式
-- 历史对话管理
-
-### 4. Prompt 模板管理
-- 自定义提示词模板
-- `{{variable}}` 占位符替换
-- 分类管理（rag / general / translate）
-- 使用统计
-
----
-
-## 🌐 部署链接
-
-| 组件 | 地址 | 技术 |
-|------|------|------|
-| 🖥️ **前端** | [https://rag-knowledge-base.vercel.app](https://rag-knowledge-base.vercel.app) | Vercel |
-| ⚙️ **后端 API** | [https://rag-knowledge-base.onrender.com](https://rag-knowledge-base.onrender.com) | Render (Docker) |
-
-> ⚠️ Render 免费实例在无访问时会休眠，首次请求可能需要等待 30-60 秒唤醒。
-
----
-
-## 🚀 本地快速启动
-
-### 方式一：使用 OpenAI 兼容 API（推荐，快速）
+### 后端启动
 
 ```bash
-# 1. 设置 API Key（硅基流动 / DeepSeek / OpenAI 均可）
-set OPENAI_API_KEY=sk-your-key-here
+# 1. 设置 API Key（硅基流动平台获取）
+set OPENAI_API_KEY=your_siliconflow_api_key
 
-# 2. 启动后端
+# 2. 启动后端（openai profile 使用云端 API）
 mvnw spring-boot:run -Dspring-boot.run.profiles=openai
+```
 
-# 3. 另开终端，启动前端
+后端启动在 **http://localhost:8080**
+
+### 前端启动
+
+```bash
+# 1. 进入前端目录
 cd frontend
+
+# 2. 安装依赖
 npm install
+
+# 3. 启动开发服务器
 npm run dev
 ```
 
-- 前端访问：http://localhost:3000
-- 后端 API：http://localhost:8080
-- 默认使用 H2 文件数据库，无需额外安装
-
-### 方式二：使用本地 Ollama（离线）
-
-```bash
-# 1. 启动 Ollama
-ollama serve
-ollama pull qwen2:0.5b
-ollama pull nomic-embed-text
-
-# 2. 启动后端（默认 profile 使用 Ollama）
-mvnw spring-boot:run
-
-# 3. 启动前端
-cd frontend && npm run dev
-```
-
-### 方式三：Docker Compose 一键启动
-
-```bash
-docker-compose up -d
-```
-
-启动后访问 **http://localhost**
+前端启动在 **http://localhost:3000**
 
 ---
 
-## ☁️ 在线部署指南
+## 🔐 环境变量说明
 
-### 前提条件
+以下环境变量需要在运行后端时配置，**不要将真实值写入代码或仓库**：
 
-1. 一个 **GitHub 账号**
-2. 一个 **Vercel 账号**（GitHub 登录即可）
-3. 一个 **Render 账号**（GitHub 登录即可）
-4. 一个 **硅基流动 API Key**（[siliconflow.cn](https://siliconflow.cn) 注册，新用户送 $14 额度）
+| 变量名 | 说明 | 示例值 |
+|--------|------|--------|
+| `OPENAI_API_KEY` | SiliconFlow API Key（必填） | `sk-your-key-here` |
+| `SPRING_PROFILES_ACTIVE` | Spring 激活 profile | `openai` |
+| `JWT_SECRET` | JWT 签名密钥 | `your-jwt-secret` |
 
-### 第一步：创建个人仓库
+---
 
-1. 登录 GitHub → 点 `+` → **New repository**
-2. 仓库名：`rag-knowledge-base`
-3. 设为 Private 或 Public
-4. 不要勾选初始化 README
+## 📦 部署说明
 
-```bash
-# 在项目目录添加个人远程仓库
-git remote add personal https://github.com/你的用户名/rag-knowledge-base.git
-
-# 推送代码
-git push personal main
-```
-
-> 日常推 `personal`，交作业时推 `origin`，两份代码保持一致。
-
-### 第二步：部署后端到 Render
-
-1. 登录 [dashboard.render.com](https://dashboard.render.com)
-2. 点 **New +** → **Web Service**
-3. 连接你的 GitHub 仓库
-4. 配置：
+### Vercel 前端部署
 
 | 配置项 | 值 |
 |--------|-----|
-| Name | `rag-knowledge-base` |
-| Environment | **Docker** |
-| Branch | `main` |
-| Dockerfile Path | `./Dockerfile` |
-
-5. 添加环境变量：
-
-| 变量 | 值 |
-|------|-----|
-| `OPENAI_API_KEY` | 你的硅基流动 API Key |
-| `SPRING_PROFILES_ACTIVE` | `openai` |
-| `JWT_SECRET` | 自动生成 ✓ |
-
-6. 选择 **Free** 计划 → **Create Web Service**
-
-部署完成后，后端 URL 类似：`https://rag-knowledge-base.onrender.com`
-
-### 第三步：部署前端到 Vercel
-
-1. 登录 [vercel.com](https://vercel.com)
-2. 点 **Add New...** → **Project**
-3. 导入你的 GitHub 仓库
-4. 配置：
-
-| 配置项 | 值 |
-|--------|-----|
+| Framework Preset | **Vite** |
 | Root Directory | `frontend` |
-| Framework | **Vite** |
 | Build Command | `npm run build` |
 | Output Directory | `dist` |
+| Install Command | `npm install` |
 
-5. 点 **Deploy**
+### Railway 后端部署
 
-部署完成后，前端 URL 类似：`https://rag-knowledge-base.vercel.app`
+后端通过项目根目录的 `Dockerfile` 构建 Docker 镜像并启动。在 Railway 控制台中需要配置以下环境变量：
 
-### 第四步：配置前端 API 代理
+- `OPENAI_API_KEY`
+- `SPRING_PROFILES_ACTIVE`（设为 `openai`）
+- `JWT_SECRET`
 
-在 Vercel 项目设置中，或修改 `vercel.json`：
+Railway 会自动检测 `Dockerfile` 并执行多阶段构建（Maven 编译 → JRE 运行）。
+
+---
+
+## 🔀 前端接口转发
+
+前端 `frontend/vercel.json` 中配置了 API 请求转发规则，将前端 `/api/*` 路径的请求转发到 Railway 后端：
 
 ```json
 {
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "https://rag-knowledge-base.onrender.com/api/$1" },
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/api/(.*)",
+      "destination": "https://rag-knowledge-base-api-production.up.railway.app/api/$1"
+    }
   ]
 }
 ```
 
----
-
-## 📚 API 文档
-
-启动后端后访问 Swagger UI：http://localhost:8080/swagger-ui.html
-
-### 核心接口
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| POST | `/api/auth/register` | 用户注册 |
-| POST | `/api/auth/login` | 用户登录 |
-| POST | `/api/chat` | 发送消息 |
-| GET | `/api/chat/history/{id}` | 获取对话历史 |
-| GET | `/api/chat/conversations` | 获取会话列表 |
-| DELETE | `/api/chat/history/{id}` | 删除对话 |
-| POST | `/api/documents` | 上传文档 |
-| GET | `/api/documents` | 获取文档列表 |
-| DELETE | `/api/documents/{id}` | 删除文档 |
-| GET | `/api/templates` | 获取模板列表 |
-| GET | `/api/config/ai` | 获取 AI 配置 |
+例如前端请求 `/api/auth/login` 会被转发到 `https://rag-knowledge-base-api-production.up.railway.app/api/auth/login`。
 
 ---
 
-## 🤖 Prompt 模板设计
+## 🛡️ 安全说明
 
-详见 [docs/Prompt 报告.md](docs/Prompt%20报告.md)
-
-系统内置的 RAG 默认模板：
-
-```
-你是一个智能问答助手。请根据以下参考资料回答问题。
-
-{{context}}
-
-请基于以上资料，用中文简洁明了地回答问题。
-如果资料中没有相关信息，请如实说明。
-回答时标注引用来源编号，如 [1][2]。
-```
-
-**设计迭代：**
-- **v1.0**：仅包含"根据参考资料回答问题"的简单指令
-- **v1.1（当前）**：增加三个关键约束——无资料时如实说明（减少幻觉）、标注引用来源编号（提高可追溯性）、用中文回答（明确语言要求）
-
-**自定义模板：** 用户可通过「Prompt 模板管理」页面运行时创建和修改模板，支持 `{{variableName}}` 占位符语法，定义后实时生效无需重启。
+- **API Key 保护**：SiliconFlow API Key 仅存储在 Railway 环境变量中，不会写入 GitHub 仓库、README、Dockerfile、配置文件或前端代码
+- **AI 请求转发**：所有 AI 请求由后端统一调用 SiliconFlow API，前端不直接接触 API Key
+- **用户鉴权**：系统使用 JWT 进行用户认证，注册和登录接口公开，其余接口需要携带有效 Token
+- **CORS 安全**：后端配置了跨域访问控制，允许 Vercel 前端域名访问
 
 ---
 
-## 📁 项目结构
+## 📁 项目目录结构
 
 ```
-personal-project-ZhangYN1203-main/
-├── src/main/java/com/example/app/
-│   ├── config/             # 配置类（安全、JWT、AI、数据初始化）
-│   ├── controller/         # REST API 控制器
-│   ├── service/            # 业务逻辑层
-│   ├── repository/         # 数据访问层
-│   ├── entity/             # JPA 实体
-│   └── dto/                # 数据传输对象
-├── frontend/               # Vue3 前端项目
+rag-knowledge-base/
+├── frontend/                          # Vue 3 前端项目
 │   ├── src/
-│   │   ├── api/            # API 调用 + 类型定义
-│   │   ├── views/          # 页面组件
-│   │   ├── components/     # 通用组件
-│   │   ├── stores/         # Pinia 状态管理
-│   │   └── router/         # 路由配置
-├── docker-compose.yml      # Docker 编排
-├── Dockerfile              # 后端 Docker 镜像
-├── render.yml              # Render 部署配置
-├── vercel.json             # Vercel 部署配置
-└── docs/
-    ├── Prompt 报告.md
-    ├── 系统架构图.md
-    └── 5.23记录.md
+│   │   ├── api/                       # API 调用与类型定义
+│   │   ├── components/                # 通用组件（ChatMessage、ChatInput 等）
+│   │   ├── views/                     # 页面组件（Chat、Documents、Templates、Config）
+│   │   ├── stores/                    # Pinia 状态管理
+│   │   ├── router/                    # 路由配置
+│   │   └── utils/                     # 工具函数（Markdown 渲染、时间格式化）
+│   └── vercel.json                    # Vercel 部署与 API 转发配置
+├── src/main/java/com/example/app/     # 后端 Java 源码
+│   ├── config/                        # 配置类（Security、JWT、AI、CORS）
+│   ├── controller/                    # REST API 控制器
+│   ├── service/                       # 业务逻辑层
+│   ├── repository/                    # 数据访问层
+│   ├── entity/                        # JPA 实体类
+│   └── dto/                           # 数据传输对象
+├── src/main/resources/                # 配置文件（application.yml 等）
+├── src/test/                          # 单元测试
+├── docs/                              # 项目文档
+│   ├── Prompt 报告.md                 # Prompt 设计报告
+│   ├── 系统架构图.md                  # 系统架构与交互流程
+│   └── 5.23记录.md                    # 问题解决记录
+├── Dockerfile                         # 后端 Docker 构建文件
+├── render.yml                         # Render 部署配置
+├── vercel.json                        # Vercel 部署配置（根路径）
+└── README.md                          # 项目说明文档（当前文件）
 ```
 
 ---
 
-## 🤝 AI 辅助开发说明
+## 📖 使用说明
 
-本项目在开发过程中使用了 AI 辅助编程工具：
-
-| 工具 | 用途 | 比例 |
-|------|------|------|
-| Claude Code (CLI) | 代码生成、调试、重构、文档编写 | ~60% |
-| 人工编码 | 需求分析、架构设计、AI 生成的审查与修改 | ~40% |
-
-**使用方式：**
-- AI 负责生成代码框架、编写测试、修复 Bug、文档撰写
-- 人工负责整体架构设计、核心逻辑审查、安全策略、部署配置
-
-**优势：** AI 辅助大幅提升了开发效率，特别是在配置调试（Spring AI、Docker、SSE 流式）和文档撰写方面节省了大量时间。
+1. **打开前端地址**：浏览器访问 [https://rag-knowledge-base-beige.vercel.app](https://rag-knowledge-base-beige.vercel.app)
+2. **注册账号**：点击登录页面的注册链接，输入用户名、邮箱和密码完成注册
+3. **登录系统**：使用注册的账号登录
+4. **上传知识库文档**：进入知识库管理页面，上传 TXT、PDF 或 Word 文档
+5. **智能问答**：进入聊天页面，在输入框中输入问题，系统将基于已上传的文档内容生成回答
+6. **查看引用来源**：AI 回答后会标注引用编号，点击可查看对应的文档片段
 
 ---
 
-## 📊 评分参考
+## ❓ 常见问题
 
-| 评分维度 | 分值 | 说明 |
-|---------|------|------|
-| 功能完整性 | 25 | 完整实现用户认证、文档管理、智能问答、模板管理四大模块 |
-| AI 深度集成 | 20 | 集成 Spring AI，支持流式输出 + RAG 检索 + Prompt 模板管理 |
-| 架构与代码质量 | 20 | 清晰的分层架构（Controller → Service → Repository），DDD 风格 |
-| UI/UX 设计 | 10 | 类 ChatGPT 对话界面，Markdown 渲染，响应式设计 |
-| 数据库设计 | 10 | JPA Entity 设计，向量存储，H2/PG 双模式兼容 |
-| 文档与演示 | 15 | 完整 README + 架构图 + Prompt 报告 + 解决记录 |
-| **额外加分** | **+10** | **✅ 部署至 Vercel + Render (+5) ✅ 向量检索 (RAG) (+5)** |
+**Q：前端页面能打开但登录失败？**
+A：检查 Railway 后端是否已启动完成。免费实例在无访问时会休眠，首次请求可能需要等待 30-60 秒。
+
+**Q：直接访问后端根路径返回 403？**
+A：这是 Spring Security 的正常访问控制行为，不影响功能使用。前端通过 `/api/**` 路径转发可正常调用所有接口。
+
+**Q：Vercel 构建失败？**
+A：检查 `frontend` 目录配置是否正确，确保本地 `npm run build` 可以成功构建。确认 `vercel.json` 中不含 `rootDirectory` 等不支持字段。
+
+**Q：Railway 部署启动失败？**
+A：检查环境变量 `OPENAI_API_KEY`、`SPRING_PROFILES_ACTIVE`、`JWT_SECRET` 是否已正确配置。查看 Railway 构建日志确认 Dockerfile 构建是否成功。
 
 ---
 
@@ -463,7 +265,9 @@ MIT License
 
 ---
 
-## 📬 联系方式
+## 📬 项目仓库
 
-- 项目仓库：[GitHub](https://github.com/ZhangYN1203/rag-knowledge-base)
-- 如有问题请提交 Issue
+- 个人仓库：[https://github.com/ZhangYN1203/rag-knowledge-base](https://github.com/ZhangYN1203/rag-knowledge-base)
+- 组织仓库：[https://github.com/cs-sbs/personal-project-ZhangYN1203](https://github.com/cs-sbs/personal-project-ZhangYN1203)
+
+如有问题请提交 Issue。
