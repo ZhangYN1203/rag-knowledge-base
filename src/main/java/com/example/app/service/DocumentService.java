@@ -1,6 +1,7 @@
 package com.example.app.service;
 
 import com.example.app.entity.Document;
+import com.example.app.exception.BusinessException;
 import com.example.app.repository.DocumentRepository;
 import com.example.app.dto.response.DocumentResponse;
 import org.apache.pdfbox.Loader;
@@ -17,6 +18,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.nio.file.*;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -24,6 +26,7 @@ import java.util.stream.Collectors;
 public class DocumentService {
 
     private static final Logger log = LoggerFactory.getLogger(DocumentService.class);
+    private static final Set<String> ALLOWED_EXTENSIONS = Set.of(".pdf", ".docx", ".txt", ".md");
 
     private final DocumentRepository documentRepository;
     private final ChunkingService chunkingService;
@@ -43,8 +46,12 @@ public class DocumentService {
     public DocumentResponse uploadDocument(MultipartFile file, String category, Long userId) throws IOException {
         String originalFilename = file.getOriginalFilename();
         String extension = originalFilename != null && originalFilename.contains(".")
-                ? originalFilename.substring(originalFilename.lastIndexOf("."))
+                ? originalFilename.substring(originalFilename.lastIndexOf(".")).toLowerCase()
                 : "";
+
+        if (!ALLOWED_EXTENSIONS.contains(extension)) {
+            throw new BusinessException("不支持的文件类型: " + extension + "。支持的类型: " + ALLOWED_EXTENSIONS);
+        }
 
         String filename = UUID.randomUUID().toString() + extension;
         Path filePath = Paths.get(uploadDir, filename);
@@ -54,7 +61,6 @@ public class DocumentService {
 
         String content = extractText(file, extension);
 
-        // Chunk the content and index embeddings
         List<String> chunks = chunkingService.chunkByParagraph(content, 1000);
 
         Document document = Document.builder()

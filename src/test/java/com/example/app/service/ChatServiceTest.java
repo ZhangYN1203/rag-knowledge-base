@@ -41,12 +41,14 @@ class ChatServiceTest {
     private ChatMessageRepository chatMessageRepository;
     @Mock
     private TemplateService templateService;
+    @Mock
+    private ConfigService configService;
 
     private ChatService chatService;
 
     @BeforeEach
     void setUp() {
-        ModelProvider modelProvider = new ModelProvider(chatModel);
+        ModelProvider modelProvider = new ModelProvider(chatModel, null);
         chatService = new ChatService(modelProvider, embeddingService, chatMessageRepository, templateService);
     }
 
@@ -159,6 +161,10 @@ class ChatServiceTest {
 
     @Test
     void deleteConversation_shouldDeleteMessages() {
+        ChatMessage msg = ChatMessage.builder()
+                .conversationId("conv1").userId(1L).role("user").content("Hi").build();
+        when(chatMessageRepository.findByConversationId("conv1")).thenReturn(List.of(msg));
+
         chatService.deleteConversation("conv1", 1L);
         verify(chatMessageRepository).deleteByConversationId("conv1");
     }

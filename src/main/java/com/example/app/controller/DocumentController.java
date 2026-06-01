@@ -3,6 +3,7 @@ package com.example.app.controller;
 import com.example.app.dto.response.ApiResponse;
 import com.example.app.dto.response.DocumentResponse;
 import com.example.app.entity.User;
+import com.example.app.exception.BusinessException;
 import com.example.app.repository.UserRepository;
 import com.example.app.service.DocumentService;
 import org.springframework.http.ResponseEntity;
@@ -28,24 +29,18 @@ public class DocumentController {
     private Long getUserId(UserDetails userDetails) {
         return userRepository.findByUsername(userDetails.getUsername())
                 .map(User::getId)
-                .orElseThrow(() -> new RuntimeException("用户不存在"));
+                .orElseThrow(() -> new BusinessException("用户不存在"));
     }
 
     @PostMapping
     public ResponseEntity<ApiResponse<DocumentResponse>> uploadDocument(
             @RequestParam("file") MultipartFile file,
             @RequestParam(value = "category", defaultValue = "default") String category,
-            @AuthenticationPrincipal UserDetails userDetails) {
+            @AuthenticationPrincipal UserDetails userDetails) throws Exception {
 
         Long userId = getUserId(userDetails);
-
-        try {
-            DocumentResponse response = documentService.uploadDocument(file, category, userId);
-            return ResponseEntity.ok(ApiResponse.success(response, "文档上传成功"));
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError()
-                    .body(ApiResponse.error(500, "上传失败：" + e.getMessage()));
-        }
+        DocumentResponse response = documentService.uploadDocument(file, category, userId);
+        return ResponseEntity.ok(ApiResponse.success(response, "文档上传成功"));
     }
 
     @GetMapping

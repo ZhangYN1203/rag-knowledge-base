@@ -123,14 +123,6 @@ export const chatApi = {
   delete: (conversationId: string) => api.delete(`/chat/history/${conversationId}`)
 }
 
-export const chatStreamApi = {
-  stream: (message: string, conversationId?: string) => {
-    const params = new URLSearchParams({ message })
-    if (conversationId) params.append('conversationId', conversationId)
-    return `/api/chat/stream?${params.toString()}`
-  }
-}
-
 export const documentApi = {
   upload: (file: File, category: string) => {
     const formData = new FormData()

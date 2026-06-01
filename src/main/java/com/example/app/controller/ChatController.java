@@ -6,6 +6,7 @@ import com.example.app.dto.response.ChatResponse;
 import com.example.app.dto.response.ConversationSummary;
 import com.example.app.entity.ChatMessage;
 import com.example.app.entity.User;
+import com.example.app.exception.BusinessException;
 import com.example.app.repository.UserRepository;
 import com.example.app.service.ChatService;
 import org.springframework.http.MediaType;
@@ -32,7 +33,7 @@ public class ChatController {
     private Long getUserId(UserDetails userDetails) {
         return userRepository.findByUsername(userDetails.getUsername())
                 .map(User::getId)
-                .orElseThrow(() -> new RuntimeException("用户不存在"));
+                .orElseThrow(() -> new BusinessException("用户不存在"));
     }
 
     @PostMapping

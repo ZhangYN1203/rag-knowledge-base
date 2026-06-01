@@ -4,6 +4,11 @@
 
 本系统的 Prompt 管理遵循"配置化 + 数据库持久化"的设计原则，所有提示词通过 `PromptTemplate` 实体存储在数据库中，通过 `TemplateService` 进行管理和渲染，避免了代码中的硬编码。
 
+**当前 AI 提供商：** SiliconFlow（硅基流动）
+- 对话模型：`Qwen/Qwen2.5-7B-Instruct`
+- 嵌入模型：`BAAI/bge-m3`
+- 备选方案：Ollama 本地模型（`qwen2:0.5b` + `nomic-embed-text`）
+
 ---
 
 ## 版本记录
@@ -53,9 +58,12 @@
          → buildSystemPrompt() 构建完整 Prompt
              → TemplateService.renderTemplateByName("rag-default")
              → 将文档片段注入 {{context}} 占位符
-         → ChatModel.stream(Prompt) 调用 LLM
-         → SSE 流式返回 token → 前端拼接展示
+         → ChatModel.call(Prompt) 调用 LLM（非流式）
+         → 后端生成完整回答 → 返回给前端展示
+         → 对话记录持久化到数据库
 ```
+
+> **注：** 支持流式和非流式两种模式。当前生产环境使用非流式 POST 请求以兼容较低性能的模型；SSE 流式接口 (`/api/chat/stream`) 保留可用。
 
 ---
 

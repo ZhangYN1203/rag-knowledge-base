@@ -7,6 +7,7 @@ import com.example.app.service.EmbeddingService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.core.annotation.Order;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.stereotype.Component;
@@ -17,6 +18,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 @Component
+@Order(2)
 public class KnowledgeBaseInitializer implements CommandLineRunner {
 
     private static final Logger log = LoggerFactory.getLogger(KnowledgeBaseInitializer.class);
@@ -63,6 +65,7 @@ public class KnowledgeBaseInitializer implements CommandLineRunner {
                     case "java-basics" -> "Java编程基础";
                     case "rag-technology" -> "RAG技术原理";
                     case "spring-framework" -> "Spring框架概述";
+                    case "system-guide" -> "本系统使用指南";
                     default -> rawName;
                 };
                 String content;

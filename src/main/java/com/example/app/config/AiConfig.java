@@ -29,6 +29,7 @@ public class AiConfig {
                 .defaultOptions(OllamaOptions.builder()
                         .model("qwen2:0.5b")
                         .temperature(0.7)
+                        .keepAlive("30m")
                         .build())
                 .build();
     }
@@ -39,6 +40,7 @@ public class AiConfig {
                 .ollamaApi(ollamaApi)
                 .defaultOptions(OllamaOptions.builder()
                         .model("nomic-embed-text")
+                        .keepAlive("30m")
                         .build())
                 .build();
     }

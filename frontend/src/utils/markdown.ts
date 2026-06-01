@@ -1,12 +1,11 @@
 import { marked } from 'marked'
+import * as DOMPurify from 'dompurify'
 
-// Configure marked for GFM and line breaks
 marked.setOptions({
   breaks: true,
   gfm: true
 })
 
-// Extend renderer for code blocks
 const renderer = new marked.Renderer()
 
 renderer.code = (code: string, infostring: string | undefined) => {
@@ -20,8 +19,11 @@ renderer.code = (code: string, infostring: string | undefined) => {
 
 export function renderMarkdown(text: string): string {
   if (!text) return ''
-  const result = marked.parse(text)
-  return typeof result === 'string' ? result : ''
+  const rawHtml = marked.parse(text) as string
+  return DOMPurify.default?.sanitize(rawHtml, {
+    ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 's', 'code', 'pre', 'blockquote', 'ul', 'ol', 'li', 'a', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'hr', 'img'],
+    ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'class', 'target', 'rel']
+  }) ?? rawHtml
 }
 
 export function formatRelativeTime(dateStr: string): string {

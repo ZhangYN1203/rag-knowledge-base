@@ -2,6 +2,7 @@ package com.example.app.service;
 
 import com.example.app.entity.ConfigProperty;
 import com.example.app.repository.ConfigPropertyRepository;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -12,10 +13,12 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ConfigService {
 
     private final ConfigPropertyRepository repository;
+    private final Environment environment;
     private final Map<String, String> cache = new ConcurrentHashMap<>();
 
-    public ConfigService(ConfigPropertyRepository repository) {
+    public ConfigService(ConfigPropertyRepository repository, Environment environment) {
         this.repository = repository;
+        this.environment = environment;
         loadAll();
     }
 
@@ -47,13 +50,25 @@ public class ConfigService {
             cache.put(prop.getConfigKey(), prop.getConfigValue());
         }
 
-        // Set defaults if empty
-        setDefaultIfAbsent("ai.provider", "ollama");
-        setDefaultIfAbsent("ai.chat.model", "qwen2:7b");
-        setDefaultIfAbsent("ai.embedding.model", "nomic-embed-text");
-        setDefaultIfAbsent("ai.base-url", "http://localhost:11434");
-        setDefaultIfAbsent("ai.temperature", "0.7");
-        setDefaultIfAbsent("ai.max-tokens", "2048");
+        // Detect active profile: if "openai" is active, use SiliconFlow defaults
+        boolean isOpenAi = environment != null
+                && List.of(environment.getActiveProfiles()).contains("openai");
+
+        if (isOpenAi) {
+            setDefaultIfAbsent("ai.provider", "openai");
+            setDefaultIfAbsent("ai.chat.model", "Qwen/Qwen2.5-7B-Instruct");
+            setDefaultIfAbsent("ai.embedding.model", "BAAI/bge-m3");
+            setDefaultIfAbsent("ai.base-url", "https://api.siliconflow.cn");
+            setDefaultIfAbsent("ai.temperature", "0.7");
+            setDefaultIfAbsent("ai.max-tokens", "2048");
+        } else {
+            setDefaultIfAbsent("ai.provider", "ollama");
+            setDefaultIfAbsent("ai.chat.model", "qwen2:7b");
+            setDefaultIfAbsent("ai.embedding.model", "nomic-embed-text");
+            setDefaultIfAbsent("ai.base-url", "http://localhost:11434");
+            setDefaultIfAbsent("ai.temperature", "0.7");
+            setDefaultIfAbsent("ai.max-tokens", "2048");
+        }
     }
 
     private void setDefaultIfAbsent(String key, String value) {

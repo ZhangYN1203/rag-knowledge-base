@@ -3,7 +3,7 @@ package com.example.app.service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.document.Document;
-import org.springframework.ai.ollama.api.OllamaApi;
+import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -18,12 +18,12 @@ public class EmbeddingService {
 
     private static final Logger log = LoggerFactory.getLogger(EmbeddingService.class);
 
-    private final OllamaApi ollamaApi;
+    private final EmbeddingModel embeddingModel;
     private final JdbcTemplate jdbcTemplate;
     private final boolean isH2;
 
-    public EmbeddingService(OllamaApi ollamaApi, JdbcTemplate jdbcTemplate) {
-        this.ollamaApi = ollamaApi;
+    public EmbeddingService(EmbeddingModel embeddingModel, JdbcTemplate jdbcTemplate) {
+        this.embeddingModel = embeddingModel;
         this.jdbcTemplate = jdbcTemplate;
         this.isH2 = detectH2();
     }
@@ -38,10 +38,9 @@ public class EmbeddingService {
     }
 
     public float[] generateEmbedding(String text) {
-        var request = new OllamaApi.EmbeddingsRequest("nomic-embed-text", text);
-        var response = ollamaApi.embed(request);
-        if (response.embeddings() != null && !response.embeddings().isEmpty()) {
-            return response.embeddings().get(0);
+        float[] embedding = embeddingModel.embed(text);
+        if (embedding != null) {
+            return embedding;
         }
         throw new RuntimeException("Failed to generate embedding");
     }
@@ -88,16 +87,29 @@ public class EmbeddingService {
 
     public List<Document> search(String query, int topK) {
         try {
-            float[] embedding = generateEmbedding(query);
-            String vectorStr = floatArrayToVectorString(embedding);
+            float[] queryEmbedding = generateEmbedding(query);
+            String vectorStr = floatArrayToVectorString(queryEmbedding);
 
             List<Map<String, Object>> rows;
             if (isH2) {
-                // H2: store embedding as text, do simple match by substring (vector search disabled)
+                // H2: read all embeddings and compute cosine similarity in memory
                 rows = jdbcTemplate.queryForList(
-                    "SELECT content, metadata FROM vector_store LIMIT ?",
-                    topK
+                    "SELECT content, metadata, embedding FROM vector_store"
                 );
+                // Compute cosine similarity in Java
+                for (Map<String, Object> row : rows) {
+                    String embStr = (String) row.get("embedding");
+                    float[] docEmbedding = parseVectorString(embStr);
+                    double similarity = cosineSimilarity(queryEmbedding, docEmbedding);
+                    row.put("similarity", similarity);
+                }
+                // Sort by similarity descending and take topK
+                rows.sort((a, b) -> Double.compare(
+                    (Double) b.get("similarity"), (Double) a.get("similarity")
+                ));
+                if (rows.size() > topK) {
+                    rows = rows.subList(0, topK);
+                }
             } else {
                 rows = jdbcTemplate.queryForList(
                     "SELECT content, metadata, 1 - (embedding <=> ?::vector) AS similarity " +
@@ -130,6 +142,33 @@ public class EmbeddingService {
             log.warn("Vector search failed, returning empty results", e);
             return List.of();
         }
+    }
+
+    private float[] parseVectorString(String str) {
+        // Input format: [0.123,0.456,...]
+        String trimmed = str.trim();
+        if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+            trimmed = trimmed.substring(1, trimmed.length() - 1);
+        }
+        if (trimmed.isEmpty()) return new float[0];
+        String[] parts = trimmed.split(",");
+        float[] result = new float[parts.length];
+        for (int i = 0; i < parts.length; i++) {
+            result[i] = Float.parseFloat(parts[i].trim());
+        }
+        return result;
+    }
+
+    private double cosineSimilarity(float[] a, float[] b) {
+        if (a.length != b.length || a.length == 0) return 0;
+        double dotProduct = 0, normA = 0, normB = 0;
+        for (int i = 0; i < a.length; i++) {
+            dotProduct += a[i] * b[i];
+            normA += a[i] * a[i];
+            normB += b[i] * b[i];
+        }
+        double denom = Math.sqrt(normA) * Math.sqrt(normB);
+        return denom == 0 ? 0 : dotProduct / denom;
     }
 
     public void removeDocumentEmbeddings(Long documentId) {

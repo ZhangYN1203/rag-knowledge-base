@@ -8,6 +8,7 @@ import com.example.app.dto.response.LoginResponse;
 import com.example.app.dto.response.UserResponse;
 import com.example.app.config.JwtUtil;
 import com.example.app.exception.BusinessException;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -21,12 +22,15 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final AuthenticationManager authenticationManager;
+    private final long expiration;
 
-    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtUtil jwtUtil, AuthenticationManager authenticationManager) {
+    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtUtil jwtUtil, AuthenticationManager authenticationManager,
+                       @Value("${jwt.expiration}") long expiration) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
         this.authenticationManager = authenticationManager;
+        this.expiration = expiration;
     }
 
     @Transactional
@@ -86,11 +90,15 @@ public class AuthService {
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
                 .user(userResponse)
-                .expiresIn(jwtUtil.getClass().getDeclaredFields().length > 0 ? 86400000L : 86400000L)
+                .expiresIn(expiration)
                 .build();
     }
 
     public LoginResponse refreshToken(String refreshToken) {
+        if (!jwtUtil.validateToken(refreshToken)) {
+            throw new BusinessException("无效的刷新令牌");
+        }
+        
         String username = jwtUtil.extractUsername(refreshToken);
         
         User user = userRepository.findByUsername(username)

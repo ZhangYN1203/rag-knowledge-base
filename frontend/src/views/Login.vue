@@ -1,8 +1,18 @@
 <template>
-  <div class="login-container">
-    <div class="login-box">
-      <h1 class="title">RAG 智能知识库</h1>
-      <el-form :model="form" :rules="rules" ref="formRef">
+  <div class="auth-container">
+    <div class="auth-card">
+      <div class="auth-header">
+        <div class="logo-icon">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+            <path d="M2 17l10 5 10-5"/>
+            <path d="M2 12l10 5 10-5"/>
+          </svg>
+        </div>
+        <h1 class="auth-title">RAG 智能知识库</h1>
+        <p class="auth-subtitle">登录您的账号</p>
+      </div>
+      <el-form :model="form" :rules="rules" ref="formRef" class="auth-form">
         <el-form-item prop="username">
           <el-input v-model="form.username" placeholder="用户名" size="large" prefix-icon="User" />
         </el-form-item>
@@ -10,14 +20,14 @@
           <el-input v-model="form.password" type="password" placeholder="密码" size="large" prefix-icon="Lock" show-password />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" size="large" :loading="loading" @click="handleLogin" style="width: 100%">
+          <el-button type="primary" size="large" :loading="loading" @click="handleLogin" class="auth-btn">
             登录
           </el-button>
         </el-form-item>
-        <div class="links">
-          <router-link to="/register">没有账号？立即注册</router-link>
-        </div>
       </el-form>
+      <div class="auth-footer">
+        还没有账号？<router-link to="/register">立即注册</router-link>
+      </div>
     </div>
   </div>
 </template>
@@ -26,9 +36,11 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { authApi, type LoginRequest } from '@/api/types'
+import { useAuthStore } from '@/stores/authStore'
+import type { LoginRequest } from '@/api/types'
 
 const router = useRouter()
+const authStore = useAuthStore()
 const formRef = ref()
 const loading = ref(false)
 
@@ -45,11 +57,9 @@ const rules = {
 const handleLogin = async () => {
   await formRef.value.validate()
   loading.value = true
-  
+
   try {
-    const res = await authApi.login(form)
-    localStorage.setItem('accessToken', res.data.accessToken)
-    localStorage.setItem('refreshToken', res.data.refreshToken)
+    await authStore.login(form)
     ElMessage.success('登录成功')
     router.push('/')
   } catch (error: any) {
@@ -61,35 +71,120 @@ const handleLogin = async () => {
 </script>
 
 <style scoped>
-.login-container {
+.auth-container {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  position: relative;
+  overflow: hidden;
 }
 
-.login-box {
-  background: white;
-  padding: 40px;
-  border-radius: 10px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-  width: 400px;
+.auth-container::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle at 30% 70%, rgba(255,255,255,0.06) 0%, transparent 50%),
+              radial-gradient(circle at 70% 30%, rgba(255,255,255,0.04) 0%, transparent 50%);
+  pointer-events: none;
 }
 
-.title {
+.auth-card {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  padding: 48px 40px 36px;
+  border-radius: 24px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+  width: 420px;
+  max-width: 100%;
+  position: relative;
+  animation: cardIn 0.5s ease-out;
+}
+
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(20px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.auth-header {
   text-align: center;
-  color: #333;
-  margin-bottom: 30px;
-  font-size: 28px;
+  margin-bottom: 32px;
 }
 
-.links {
+.logo-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  border-radius: 16px;
+  color: white;
+  margin-bottom: 16px;
+}
+
+.auth-title {
+  font-size: 26px;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin-bottom: 6px;
+}
+
+.auth-subtitle {
+  font-size: 14px;
+  color: #888;
+}
+
+.auth-form {
+  margin-bottom: 8px;
+}
+
+.auth-form :deep(.el-input__wrapper) {
+  border-radius: 12px;
+  padding: 4px 16px;
+  box-shadow: 0 0 0 1px #e0e0e0 inset;
+  transition: box-shadow 0.2s;
+}
+
+.auth-form :deep(.el-input__wrapper:hover) {
+  box-shadow: 0 0 0 1px #667eea inset;
+}
+
+.auth-form :deep(.el-input__wrapper.is-focus) {
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.3) inset;
+}
+
+.auth-form :deep(.el-form-item) {
+  margin-bottom: 24px;
+}
+
+.auth-btn {
+  width: 100%;
+  height: 48px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.auth-footer {
   text-align: center;
-  margin-top: 15px;
+  font-size: 14px;
+  color: #888;
 }
 
-.links a {
+.auth-footer a {
   color: #667eea;
   text-decoration: none;
+  font-weight: 600;
+}
+
+.auth-footer a:hover {
+  text-decoration: underline;
 }
 </style>

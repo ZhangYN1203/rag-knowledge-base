@@ -1,16 +1,14 @@
 [build]
+  base = "frontend"
   command = "npm run build"
   publish = "dist"
 
 [build.environment]
   NODE_VERSION = "18"
 
-# !!! IMPORTANT: After deploying backend on Render, replace the URL below !!!
-# Go to https://dashboard.render.com -> your service -> copy the URL
-# Example: https://rag-knowledge-base-api.onrender.com
 [[redirects]]
   from = "/api/*"
-  to = "https://your-backend-url.onrender.com/api/:splat"
+  to = "https://rag-knowledge-base-api.onrender.com/api/:splat"
   status = 200
 
 [[redirects]]

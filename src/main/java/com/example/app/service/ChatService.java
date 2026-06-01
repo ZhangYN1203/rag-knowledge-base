@@ -5,8 +5,10 @@ import com.example.app.dto.response.ConversationSummary;
 import com.example.app.entity.ChatMessage;
 import com.example.app.repository.ChatMessageRepository;
 import com.example.app.config.ModelProvider;
+import com.example.app.exception.BusinessException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.messages.SystemMessage;
@@ -24,19 +26,27 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 @Service
 public class ChatService {
 
     private static final Logger log = LoggerFactory.getLogger(ChatService.class);
-    private static final long SSE_TIMEOUT = 300_000L; // 5 minutes
+    private static final long SSE_TIMEOUT = 300_000L;
 
     private final ModelProvider modelProvider;
     private final EmbeddingService embeddingService;
     private final ChatMessageRepository chatMessageRepository;
     private final TemplateService templateService;
     private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
+    private final ScheduledExecutorService heartbeatExecutor = Executors.newSingleThreadScheduledExecutor(r -> {
+        Thread t = new Thread(r, "sse-heartbeat");
+        t.setDaemon(true);
+        return t;
+    });
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public ChatService(ModelProvider modelProvider,
@@ -47,6 +57,13 @@ public class ChatService {
         this.embeddingService = embeddingService;
         this.chatMessageRepository = chatMessageRepository;
         this.templateService = templateService;
+    }
+
+    @PreDestroy
+    public void cleanup() {
+        log.info("Shutting down executor services");
+        executor.shutdown();
+        heartbeatExecutor.shutdown();
     }
 
     @Transactional
@@ -87,6 +104,21 @@ public class ChatService {
         String conversationId = resolveConversationId(request);
         SseEmitter emitter = new SseEmitter(SSE_TIMEOUT);
 
+        // Atomic flag to stop heartbeat once first token arrives
+        AtomicBoolean firstTokenArrived = new AtomicBoolean(false);
+
+        // Start a heartbeat timer to keep the SSE connection alive during model loading
+        var heartbeatFuture = heartbeatExecutor.scheduleAtFixedRate(() -> {
+            try {
+                if (firstTokenArrived.get()) return;
+                emitter.send(SseEmitter.event()
+                        .name("heartbeat")
+                        .data("ping"));
+            } catch (IOException e) {
+                // Connection already closed, heartbeat stops silently
+            }
+        }, 5, 10, TimeUnit.SECONDS);
+
         executor.submit(() -> {
             try {
                 ChatModel chatModel = modelProvider.getChatModel();
@@ -119,10 +151,19 @@ public class ChatService {
                     if (gen != null && gen.getOutput() != null) {
                         String token = gen.getOutput().getText();
                         if (token != null && !token.isEmpty()) {
+                            // Stop heartbeat on first token
+                            if (firstTokenArrived.compareAndSet(false, true)) {
+                                heartbeatFuture.cancel(false);
+                            }
                             fullAnswer.append(token);
                             sendEvent(emitter, "token", token);
                         }
                     }
+                }
+
+                // Make sure heartbeat is stopped
+                if (firstTokenArrived.compareAndSet(false, true)) {
+                    heartbeatFuture.cancel(false);
                 }
 
                 // 5. Send references
@@ -142,6 +183,7 @@ public class ChatService {
                 emitter.complete();
             } catch (Exception e) {
                 log.error("SSE stream error", e);
+                heartbeatFuture.cancel(false);
                 try {
                     sendEvent(emitter, "error", e.getMessage());
                 } catch (IOException ignored) {}
@@ -252,7 +294,11 @@ public class ChatService {
     }
 
     public List<ChatMessage> getConversationHistory(String conversationId) {
-        return chatMessageRepository.findByConversationId(conversationId);
+        List<ChatMessage> messages = chatMessageRepository.findByConversationId(conversationId);
+        if (messages.isEmpty()) {
+            throw new BusinessException("对话不存在");
+        }
+        return messages;
     }
 
     public List<ConversationSummary> getUserConversations(Long userId) {
@@ -286,7 +332,16 @@ public class ChatService {
         return summaries;
     }
 
+    @Transactional
     public void deleteConversation(String conversationId, Long userId) {
+        List<ChatMessage> messages = chatMessageRepository.findByConversationId(conversationId);
+        if (messages.isEmpty()) {
+            throw new BusinessException("对话不存在");
+        }
+        boolean isOwner = messages.stream().anyMatch(m -> m.getUserId().equals(userId));
+        if (!isOwner) {
+            throw new BusinessException("无权删除该对话");
+        }
         chatMessageRepository.deleteByConversationId(conversationId);
     }
 }

@@ -1,37 +1,54 @@
 <template>
-  <div class="templates-container">
-    <div class="header">
-      <h1>Prompt 模板管理</h1>
+  <div class="page-container">
+    <div class="page-header">
+      <div class="header-left">
+        <router-link to="/" class="back-link">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="15 18 9 12 15 6"/>
+          </svg>
+        </router-link>
+        <div>
+          <h1>Prompt 模板管理</h1>
+          <p class="header-desc">管理和复用 AI 提示词模板</p>
+        </div>
+      </div>
       <div class="header-actions">
-        <router-link to="/"><el-button type="primary" size="small">返回聊天</el-button></router-link>
-        <el-button type="danger" size="small" @click="handleLogout">退出</el-button>
+        <el-button type="danger" size="small" plain @click="handleLogout">退出登录</el-button>
       </div>
     </div>
 
-    <div class="content">
-      <el-card class="toolbar">
-        <el-button type="primary" @click="showCreateDialog">创建模板</el-button>
-        <el-select v-model="categoryFilter" placeholder="分类筛选" clearable style="width: 150px; margin-left: 12px;" @change="loadTemplates">
-          <el-option label="默认" value="default" />
-          <el-option label="RAG" value="rag" />
-          <el-option label="通用" value="general" />
-        </el-select>
+    <div class="page-content">
+      <el-card shadow="never" class="toolbar-card">
+        <div class="toolbar">
+          <el-button type="primary" @click="showCreateDialog" class="action-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            创建模板
+          </el-button>
+          <el-select v-model="categoryFilter" placeholder="分类筛选" clearable style="width: 150px" @change="loadTemplates">
+            <el-option label="全部" value="" />
+            <el-option label="默认" value="default" />
+            <el-option label="RAG" value="rag" />
+            <el-option label="通用" value="general" />
+          </el-select>
+        </div>
       </el-card>
 
-      <el-card>
-        <el-table :data="templateStore.templates" style="width: 100%" v-loading="templateStore.loading">
+      <el-card shadow="never">
+        <el-table :data="templateStore.templates" style="width: 100%" v-loading="templateStore.loading" empty-text="暂无模板">
           <el-table-column prop="name" label="名称" min-width="150" />
-          <el-table-column prop="category" label="分类" width="100" />
+          <el-table-column prop="category" label="分类" width="90" />
           <el-table-column label="内容预览" min-width="300">
             <template #default="{ row }">
               <div class="content-preview">{{ row.content.substring(0, 100) }}{{ row.content.length > 100 ? '...' : '' }}</div>
             </template>
           </el-table-column>
-          <el-table-column prop="usageCount" label="使用次数" width="80" />
+          <el-table-column prop="usageCount" label="使用次数" width="80" align="center" />
           <el-table-column prop="updatedAt" label="更新时间" width="160">
             <template #default="{ row }">{{ formatTime(row.updatedAt) }}</template>
           </el-table-column>
-          <el-table-column label="操作" width="160" fixed="right">
+          <el-table-column label="操作" width="150" fixed="right">
             <template #default="{ row }">
               <el-button size="small" @click="showEditDialog(row)">编辑</el-button>
               <el-button size="small" type="danger" @click="handleDelete(row.id)">删除</el-button>
@@ -41,8 +58,7 @@
       </el-card>
     </div>
 
-    <!-- Create/Edit Dialog -->
-    <el-dialog v-model="dialogVisible" :title="isEditing ? '编辑模板' : '创建模板'" width="700px">
+    <el-dialog v-model="dialogVisible" :title="isEditing ? '编辑模板' : '创建模板'" width="700px" top="5vh">
       <el-form :model="form" :rules="rules" ref="formRef" label-width="80px">
         <el-form-item label="名称" prop="name">
           <el-input v-model="form.name" placeholder="模板唯一名称" />
@@ -62,7 +78,7 @@
         </el-form-item>
         <el-form-item v-if="form.content" label="变量">
           <div class="variable-preview">
-            <el-tag v-for="v in extractedVars" :key="v" style="margin: 2px">{{ v }}</el-tag>
+            <el-tag v-for="v in extractedVars" :key="v" style="margin: 2px" size="small">{{ v }}</el-tag>
             <span v-if="extractedVars.length === 0" class="no-vars">未检测到变量</span>
           </div>
         </el-form-item>
@@ -79,9 +95,11 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useTemplateStore } from '@/stores/templateStore'
+import { useAuthStore } from '@/stores/authStore'
 
 const router = useRouter()
 const templateStore = useTemplateStore()
+const authStore = useAuthStore()
 const dialogVisible = ref(false)
 const isEditing = ref(false)
 const editingId = ref<number | null>(null)
@@ -142,7 +160,6 @@ async function handleSave() {
     }
     dialogVisible.value = false
   } catch {
-    // Error handled in store
   } finally {
     saving.value = false
   }
@@ -152,7 +169,6 @@ async function handleDelete(id: number) {
   try {
     await templateStore.deleteTemplate(id)
   } catch {
-    // Error handled in store
   }
 }
 
@@ -161,8 +177,7 @@ async function loadTemplates() {
 }
 
 const handleLogout = () => {
-  localStorage.removeItem('accessToken')
-  localStorage.removeItem('refreshToken')
+  authStore.logout()
   router.push('/login')
 }
 
@@ -172,26 +187,86 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.templates-container {
+.page-container {
   min-height: 100vh;
   background: #f0f2f5;
-  padding: 20px;
+  padding: 24px;
 }
 
-.header {
+.page-header {
   max-width: 1200px;
-  margin: 0 auto 20px;
+  margin: 0 auto 24px;
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
 }
 
-.header h1 { font-size: 24px; color: #333; }
-.header-actions { display: flex; gap: 10px; }
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
 
-.content { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+.back-link {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  text-decoration: none;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  transition: all 0.2s;
+}
 
-.toolbar { display: flex; align-items: center; }
+.back-link:hover {
+  background: #667eea;
+  color: white;
+}
+
+.page-header h1 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin: 0;
+}
+
+.header-desc {
+  font-size: 13px;
+  color: #888;
+  margin-top: 2px;
+}
+
+.header-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.page-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.toolbar-card :deep(.el-card__body) {
+  padding: 12px 20px;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
 
 .content-preview {
   color: #888;
@@ -206,5 +281,8 @@ onMounted(() => {
   min-height: 28px;
 }
 
-.no-vars { color: #999; font-size: 13px; }
+.no-vars {
+  color: #999;
+  font-size: 13px;
+}
 </style>

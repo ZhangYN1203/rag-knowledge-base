@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.core.env.Environment;
 
 import java.util.List;
 import java.util.Map;
@@ -22,13 +23,17 @@ class ConfigServiceTest {
     @Mock
     private ConfigPropertyRepository repository;
 
+    @Mock
+    private Environment environment;
+
     private ConfigService configService;
 
     @BeforeEach
     void setUp() {
         when(repository.findAll()).thenReturn(List.of());
         when(repository.save(any(ConfigProperty.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        configService = new ConfigService(repository);
+        when(environment.getActiveProfiles()).thenReturn(new String[0]);
+        configService = new ConfigService(repository, environment);
     }
 
     @Test
@@ -86,7 +91,7 @@ class ConfigServiceTest {
     @Test
     void loadAll_shouldNotOverwriteExisting() {
         when(repository.findById("ai.provider")).thenReturn(Optional.of(new ConfigProperty("ai.provider", "existing")));
-        configService = new ConfigService(repository);
+        configService = new ConfigService(repository, environment);
 
         assertThat(configService.get("ai.provider", "")).isEqualTo("existing");
     }
