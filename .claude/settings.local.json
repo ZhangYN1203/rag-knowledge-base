@@ -109,7 +109,10 @@
       "Bash(del *)",
       "Bash(python *)",
       "Bash(jars -tf \"C:\\\\Users\\\\75944\\\\.m2\\\\repository\\\\org\\\\springframework\\\\ai\\\\spring-ai-openai\\\\1.0.0\\\\spring-ai-openai-1.0.0.jar\")",
-      "WebSearch"
+      "WebSearch",
+      "Bash(where mvn *)",
+      "Bash(git *)",
+      "Bash(C:\\\\Windows\\\\System32\\\\cmd.exe *)"
     ]
   }
 }
